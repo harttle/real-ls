@@ -1,0 +1,12 @@
+{
+  "name": "root-package",
+  "version": "1.0.0",
+  "peerDependencies": {
+    "dep-a": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "dep-a": {
+      "optional": true
+    }
+  }
+}

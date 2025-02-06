@@ -1,0 +1,71 @@
+{
+  "name": "real-ls",
+  "version": "1.0.0",
+  "description": "List actually resolved dependencies in node_modules",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "source": "src/index.ts",
+  "bin": "dist/cli.js",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node ./dist/index.js",
+    "lint": "eslint . --ext '.js,.jsx,.ts,.tsx,.md'",
+    "test": "jest",
+    "prepare": "npm run build && npm run lint && npm run test",
+    "postbuild": "chmod +x dist/cli.js"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run prepare"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harttle/real-ls.git"
+  },
+  "keywords": [
+    "typescript",
+    "CLI"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "author": "Yang Jun",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/harttle/real-ls/issues"
+  },
+  "homepage": "https://github.com/harttle/real-ls",
+  "devDependencies": {
+    "@types/enhanced-resolve": "^5.0.2",
+    "@types/figlet": "^1.5.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^27.0.3",
+    "@types/node": "^16.11.13",
+    "@types/semver": "^7.5.8",
+    "@types/yargs": "^17.0.33",
+    "@typescript-eslint/eslint-plugin": "^5.7.0",
+    "@typescript-eslint/parser": "^5.7.0",
+    "eslint": "^8.4.1",
+    "eslint-config-airbnb": "^19.0.2",
+    "eslint-plugin-import": "^2.25.3",
+    "eslint-plugin-jest": "^25.3.0",
+    "eslint-plugin-markdown": "^2.2.1",
+    "husky": "^7.0.4",
+    "jest": "^27.4.5",
+    "ts-jest": "^27.1.1",
+    "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "enhanced-resolve": "^5.18.1",
+    "flexible-tree-printer": "^1.0.3",
+    "fs-extra": "^11.3.0",
+    "resolve": "^1.22.10",
+    "semver": "^7.5.4",
+    "yargs": "^17.3.0"
+  }
+}

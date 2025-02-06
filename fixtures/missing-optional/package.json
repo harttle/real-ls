@@ -1,0 +1,8 @@
+{
+  "name": "root-package",
+  "version": "1.0.0",
+  "optionalDependencies": {
+    "dep-a": "^1.0.0",
+    "dep-b": "^2.0.0"
+  }
+}
