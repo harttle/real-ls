@@ -1,9 +1,9 @@
 import fs from 'fs';
+import chalk from 'chalk';
 import { dirname } from 'path';
 import { Resolver, CachedInputFileSystem, ResolverFactory } from 'enhanced-resolve';
 import { TreeNode } from './dep-tree';
 import { PackageJson, findNearestPackageJson } from './npm';
-import chalk from 'chalk';
 
 interface LoadTreeOptions {
   excludeDev?: boolean;
