@@ -37,6 +37,7 @@ const eslintrc = {
   rules: {
     'no-console': 'off',
     'no-continue': 'off',
+    'no-shadow': 'off',
     'import/extensions': 'off',
   },
 };
