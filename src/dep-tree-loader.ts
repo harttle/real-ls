@@ -2,8 +2,9 @@ import fs from 'fs';
 import chalk from 'chalk';
 import { dirname } from 'path';
 import { Resolver, CachedInputFileSystem, ResolverFactory } from 'enhanced-resolve';
-import { TreeNode } from './dep-tree';
+import { TreeNode } from './tree-node';
 import { PackageJson, findNearestPackageJson } from './npm';
+import { logger } from './logger';
 
 interface LoadTreeOptions {
   excludeDev?: boolean;
@@ -46,7 +47,7 @@ export class DependencyTreeLoader {
           return await this.resolveAndLoadDependency(dependency, dir, path);
         } catch (err) {
           if (required) {
-            console.warn(`Dependency "${dependency}" not installed for "${node.name}@${node.version}"`, chalk.grey(`(${node.directory})`));
+            logger.logErr(`Dependency "${dependency}" not installed for "${node.name}@${node.version}"`, chalk.grey(`(${node.directory})`));
           }
           return null;
         }

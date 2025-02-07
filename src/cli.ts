@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 import yargs from 'yargs';
+import chalk from 'chalk';
 import { printDependencyPaths } from './dep-path';
+import { LogLevel, logger } from './logger';
+
+// disable colors in non-interactive shell
+if (!process.stdout.isTTY) chalk.level = 0;
 
 const argv = yargs
   .usage('Usage: $0 <package> [options]')
@@ -34,6 +39,16 @@ const argv = yargs
       describe: 'Exclude optional dependencies',
       default: false,
     },
+    verbose: {
+      type: 'boolean',
+      describe: 'print additional log',
+      default: false,
+    },
+    silent: {
+      type: 'boolean',
+      describe: 'print results only',
+      default: false,
+    },
   })
   .example('real-ls lodash', 'find dependencies with package name "lodash"')
   .example('real-ls lodash@^4.3.0', 'find dependencies matching semver "lodash@^4.3.0"')
@@ -50,4 +65,9 @@ const options = {
   excludeOptional: argv['exclude-optional'],
 };
 
-printDependencyPaths(packageName, options);
+if (argv.verbose) logger.level = LogLevel.Log;
+else if (argv.silent) logger.level = LogLevel.Error;
+
+printDependencyPaths(packageName, options).then((success) => {
+  if (!success) process.exit(1);
+});

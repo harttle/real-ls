@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { TreeNode } from './dep-tree';
+import { TreeNode } from './tree-node';
 
 describe('TreeNode', () => {
   const fixturesDir = join(__dirname, '../fixtures/dep-tree');
