@@ -1,4 +1,4 @@
-import assert from 'assert';
+import npa from 'npm-package-arg';
 import { pathExists } from 'fs-extra';
 import { join, dirname } from 'path';
 
@@ -35,10 +35,9 @@ export interface DependencyReference {
 }
 
 export function parseSpecifier(specifier: string): DependencyReference {
-  const match = /^([^@]+)(?:@(\S+))?/.exec(specifier);
-  assert(match, `invalid specifier ${specifier}`);
+  const { name, rawSpec } = npa(specifier);
   return {
-    name: match[1],
-    version: match[2],
+    name: name || '',
+    version: rawSpec,
   };
 }

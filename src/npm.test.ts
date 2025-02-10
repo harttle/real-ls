@@ -19,7 +19,7 @@ describe('npm utils', () => {
     it('parses package name', () => {
       const { name, version } = parseSpecifier('foo');
       expect(name).toEqual('foo');
-      expect(version).toBeUndefined();
+      expect(version).toEqual('*');
     });
     it('parses package name and version', () => {
       const { name, version } = parseSpecifier('foo@1.3.3');
