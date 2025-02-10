@@ -1,6 +1,6 @@
 # real-ls
 
-Behaves similar to `npm-ls` but resolves dependencies by `require.resolve` instead of reading lockfiles (as in [loadVirtual][loadVirtual]) or reading `node_modules` (as in [loadActual][loadActual]). This makes it somewhat:
+Behaves similar to `npm-ls` but resolves dependencies by [enhanced-resolve][enhanced-resolve] instead of reading lockfiles (as in [loadVirtual][loadVirtual]) or reading `node_modules` (as in [loadActual][loadActual]). This makes it somewhat:
 
 - **universal** as it doesn't make assumptions about how node_modules are organized, works for pnpm and rush.
 - **useful** for debugging build issues in webpack/rollup/etc., as it points out the actual resolved dependencies.
@@ -29,3 +29,4 @@ real-ls --help
 
 [loadVirtual]: https://github.com/npm/cli/blob/3a80a7b7d168c23b5e297cba7b47ba5b9875934d/workspaces/arborist/lib/arborist/load-virtual.js#L31
 [loadActual]: https://github.com/npm/cli/blob/3a80a7b7d168c23b5e297cba7b47ba5b9875934d/workspaces/arborist/lib/arborist/load-actual.js#L59
+[enhanced-resolve]: https://github.com/webpack/enhanced-resolve

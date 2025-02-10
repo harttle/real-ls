@@ -59,7 +59,7 @@ export async function printDependencyPaths(
   const results = await findDependencyPaths(specifier, options);
 
   if (!results.length) logger.error(chalk.red(`Dependency "${specifier}" not found.`));
-  else logger.infoErr(chalk.green(`${results.length} path(s) found for "dep-a"`));
+  else logger.infoErr(chalk.green(`${results.length} path(s) found for "${specifier}"`));
   if (options.json) printJson(specifier, results, options);
   else printTrees(results, options);
   return results.length > 0;
