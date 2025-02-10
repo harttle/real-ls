@@ -19,6 +19,11 @@ const argv = yargs
       default: false,
       describe: 'Output in JSON format',
     },
+    'max-paths': {
+      type: 'number',
+      describe: 'Limit paths to be printed, as there can be exponential number of paths',
+      default: 1024,
+    },
     'exclude-dev': {
       type: 'boolean',
       describe: 'Exclude dev dependencies',
@@ -32,6 +37,11 @@ const argv = yargs
     'absolute-path': {
       type: 'boolean',
       describe: 'Use absolute package path instead of relative',
+      default: false,
+    },
+    'disable-path': {
+      type: 'boolean',
+      describe: 'Show no path of packages',
       default: false,
     },
     'exclude-optional': {
@@ -57,17 +67,10 @@ const argv = yargs
   .parseSync();
 
 const packageName = argv._[0] as string;
-const options = {
-  json: argv.json,
-  absolutePath: argv['absolute-path'],
-  excludeDev: argv['exclude-dev'],
-  excludePeer: argv['exclude-peer'],
-  excludeOptional: argv['exclude-optional'],
-};
 
 if (argv.verbose) logger.level = LogLevel.Log;
 else if (argv.silent) logger.level = LogLevel.Error;
 
-printDependencyPaths(packageName, options).then((success) => {
+printDependencyPaths(packageName, argv).then((success) => {
   if (!success) process.exit(1);
 });

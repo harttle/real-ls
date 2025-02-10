@@ -102,6 +102,14 @@ describe('CLI Command Test', () => {
     expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n1 path(s) found for "dep-a"\n');
   });
 
+  it('should print no path if --no-path specified', async () => {
+    const result = spawnSync(exe, ['dep-a', '--no-path'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/missing-optional') });
+
+    expect(result.stdout).toContain(`.
+└── root-package@1.0.0 ./
+    └── dep-a@1.0.0 ./node_modules/dep-a`);
+  });
+
   describe('cyclic handling', () => {
     it('should exit properly for cyclic deps', async () => {
       const result = spawnSync(exe, ['dep-c', '--json'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/cyclic') });

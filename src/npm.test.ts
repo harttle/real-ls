@@ -21,6 +21,11 @@ describe('npm utils', () => {
       expect(name).toEqual('foo');
       expect(version).toEqual('*');
     });
+    it('parses scoped package', () => {
+      const { name, version } = parseSpecifier('@babel/core@^1.0.0');
+      expect(name).toEqual('@babel/core');
+      expect(version).toEqual('^1.0.0');
+    });
     it('parses package name and version', () => {
       const { name, version } = parseSpecifier('foo@1.3.3');
       expect(name).toEqual('foo');

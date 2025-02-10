@@ -6,9 +6,15 @@ import { DependencyTreeLoader } from './dep-tree-loader';
 import { parseSpecifier } from './npm';
 import { logger } from './logger';
 
+const CWD = process.cwd();
+
 interface PrintOptions {
   // use absolute path instead of relative
   absolutePath?: boolean;
+  // show no path
+  disablePath?: boolean;
+  // limit paths
+  maxPaths?: number;
   // current working directory
   cwd?: string;
 }
@@ -35,6 +41,7 @@ export async function findDependencyPaths(specifier: string, options: FindDepend
 
   logger.infoErr(chalk.gray(`Matching "${specifier}"...`));
   const found: Map<TreeNode, TreeNode[][]> = new Map();
+  const maxPaths = options.maxPaths ?? 1024;
 
   const dfs = (node: TreeNode, stack: Set<TreeNode>): TreeNode[][] => {
     if (found.has(node)) return found.get(node)!;
@@ -43,7 +50,10 @@ export async function findDependencyPaths(specifier: string, options: FindDepend
     stack.add(node);
     const paths: TreeNode[][] = [];
     for (const child of node.children) {
-      paths.push(...dfs(child, stack).map((path: TreeNode[]) => [node, ...path]));
+      for (const path of dfs(child, stack)) {
+        if (paths.length >= maxPaths) break;
+        paths.push([node, ...path]);
+      }
     }
     stack.delete(node);
     found.set(node, paths);
@@ -72,23 +82,28 @@ function printTrees(results: TreeNode[][], options: PrintOptions) {
 }
 
 function printJson(target: string, results: TreeNode[][], options: PrintOptions) {
-  const cwd = options.cwd ?? process.cwd();
   const paths = results.map((path) => path.map((node) => ({
     name: node.name,
     version: node.version,
-    directory: options.absolutePath ? node.directory : `./${relative(cwd, node.directory)}`,
+    directory: getDirectory(node.directory, options),
   })));
   return process.stdout.write(`${JSON.stringify({ target, paths }, null, 4)}\n`);
+}
+
+function getDirectory(dir: string, options: PrintOptions): string | undefined {
+  if (options.disablePath) return undefined;
+  if (options.absolutePath) return dir;
+  const cwd = options.cwd ?? CWD;
+  return `./${relative(cwd, dir)}`;
 }
 
 function printDependencyPath(result: TreeNode[], options: PrintOptions) {
   const tree: TreeObject = {};
   let node = tree;
-  const cwd = options.cwd ?? process.cwd();
 
   for (let i = 0; i < result.length; i++) {
     const pkg = result[i];
-    const directory = options.absolutePath ? pkg.directory : `./${relative(cwd, pkg.directory)}`;
+    const directory = getDirectory(pkg.directory, options) ?? '';
     const entry = `${pkg.name}@${pkg.version} ${chalk.gray(directory)}`;
     node = node[entry] = {};
   }

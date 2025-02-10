@@ -13,7 +13,7 @@ interface LoadTreeOptions {
   mainField?: 'browser' | 'main' | 'module';
 }
 export class DependencyTreeLoader {
-  loadedNodes = new Map<string, TreeNode>();
+  pending = new Map<string, Promise<TreeNode>>();
 
   options: LoadTreeOptions;
 
@@ -31,37 +31,36 @@ export class DependencyTreeLoader {
     });
   }
 
-  async loadDependency(dir: string, path: Map<string, TreeNode> = new Map()): Promise<TreeNode> {
+  async loadDependency(dir: string): Promise<TreeNode> {
     const pkgJsonPath = await findNearestPackageJson(dir);
-    if (this.loadedNodes.has(pkgJsonPath)) {
-      return this.loadedNodes.get(pkgJsonPath)!;
+    if (this.pending.has(pkgJsonPath)) {
+      // TreeNode only, maybe without children populated
+      return this.pending.get(pkgJsonPath)!;
     }
-    if (path.has(pkgJsonPath)) {
-      return path.get(pkgJsonPath)!;
-    }
-    const node = await TreeNode.createFromPackageJsonPath(pkgJsonPath);
-    path.set(pkgJsonPath, node);
+    const pending = TreeNode.createFromPackageJsonPath(pkgJsonPath);
+    this.pending.set(pkgJsonPath, pending);
+
+    const node = await pending;
     node.children = (await Promise.all([...this.getDependencies(node.pkgJson)]
-      .map(async ([dependency, required]) => {
-        try {
-          return await this.resolveAndLoadDependency(dependency, dir, path);
-        } catch (err) {
-          if (required) {
-            logger.logErr(`Dependency "${dependency}" not installed for "${node.name}@${node.version}"`, chalk.grey(`(${node.directory})`));
-          }
-          return null;
-        }
-      })))
+      .map(([dependency, required]) => this.resolveAndLoadDependencyOrNull(dependency, required, node))))
       .filter((x) => !!x) as TreeNode[];
-    this.loadedNodes.set(pkgJsonPath, node);
-    path.delete(pkgJsonPath);
     return node;
+  }
+
+  private async resolveAndLoadDependencyOrNull(dependency: string, required: boolean, parent: TreeNode) {
+    try {
+      return await this.resolveAndLoadDependency(dependency, parent.directory);
+    } catch (err) {
+      if (required) {
+        logger.logErr(`Dependency "${dependency}" not installed for "${parent.name}@${parent.version}"`, chalk.grey(`(${parent.directory})`));
+      }
+      return null;
+    }
   }
 
   async resolveAndLoadDependency(
     packageName: string,
     fromDirectory: string,
-    path: Map<string, TreeNode> = new Map(),
   ): Promise<TreeNode> {
     return new Promise((resolve, reject) => {
       this.resolver.resolve(
@@ -72,7 +71,7 @@ export class DependencyTreeLoader {
         (err: Error | null, res?: string | false) => {
           if (err) return reject(err);
           if (!res) return reject(new Error(`failed to resolve ${packageName} from ${fromDirectory}`));
-          return resolve(this.loadDependency(dirname(res), path));
+          return resolve(this.loadDependency(dirname(res)));
         },
       );
     });

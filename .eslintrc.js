@@ -38,6 +38,7 @@ const eslintrc = {
     'no-console': 'off',
     'no-continue': 'off',
     'no-shadow': 'off',
+    'max-len': 'off',
     'import/extensions': 'off',
   },
 };
