@@ -14,10 +14,21 @@ const argv = yargs
     type: 'string',
   })
   .options({
-    json: {
-      type: 'boolean',
-      default: false,
-      describe: 'Output in JSON format',
+    format: {
+      type: 'string',
+      default: 'ascii',
+      describe: 'Output format',
+      choices: ['ascii', 'json', 'dot', 'png', 'svg'],
+    },
+    output: {
+      type: 'string',
+      describe: 'Output file name',
+    },
+    path: {
+      type: 'string',
+      describe: 'How to show directory path of each package',
+      default: 'none',
+      choices: ['none', 'absolute', 'relative'],
     },
     'max-paths': {
       type: 'number',
@@ -26,23 +37,13 @@ const argv = yargs
     },
     'exclude-dev': {
       type: 'boolean',
-      describe: 'Exclude dev dependencies',
+      describe: 'Exclude dev dependencies for root, deep dev dependencies are always excluded',
       default: false,
     },
     'exclude-peer': {
       type: 'boolean',
       describe: 'Exclude peer dependencies',
-      default: false,
-    },
-    'absolute-path': {
-      type: 'boolean',
-      describe: 'Use absolute package path instead of relative',
-      default: false,
-    },
-    'disable-path': {
-      type: 'boolean',
-      describe: 'Show no path of packages',
-      default: false,
+      default: true,
     },
     'exclude-optional': {
       type: 'boolean',

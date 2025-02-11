@@ -6,6 +6,8 @@ import { DependencyReference, PackageJson } from './npm';
 export class TreeNode {
   name: string;
 
+  depth: number;
+
   version: string;
 
   directory: string;
@@ -14,11 +16,12 @@ export class TreeNode {
 
   pkgJson: PackageJson;
 
-  constructor(pkgJson: PackageJson, directory: string) {
+  constructor(pkgJson: PackageJson, directory: string, depth: number) {
     this.pkgJson = pkgJson;
     this.name = pkgJson.name || '';
     this.version = pkgJson.version || '';
     this.directory = directory;
+    this.depth = depth;
     this.children = [];
   }
 
@@ -28,8 +31,9 @@ export class TreeNode {
     return true;
   }
 
-  static async createFromPackageJsonPath(pkgJsonPath: string) {
+  static async createFromPackageJsonPath(pkgJsonPath: string, parent?: TreeNode) {
     const pkgJson = await readJson(pkgJsonPath);
-    return new TreeNode(pkgJson, dirname(pkgJsonPath));
+    const depth = parent ? parent.depth + 1 : 0;
+    return new TreeNode(pkgJson, dirname(pkgJsonPath), depth);
   }
 }

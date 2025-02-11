@@ -31,17 +31,17 @@ export class DependencyTreeLoader {
     });
   }
 
-  async loadDependency(dir: string): Promise<TreeNode> {
+  async loadDependency(dir: string, parent?: TreeNode): Promise<TreeNode> {
     const pkgJsonPath = await findNearestPackageJson(dir);
     if (this.pending.has(pkgJsonPath)) {
       // TreeNode only, maybe without children populated
       return this.pending.get(pkgJsonPath)!;
     }
-    const pending = TreeNode.createFromPackageJsonPath(pkgJsonPath);
+    const pending = TreeNode.createFromPackageJsonPath(pkgJsonPath, parent);
     this.pending.set(pkgJsonPath, pending);
 
     const node = await pending;
-    node.children = (await Promise.all([...this.getDependencies(node.pkgJson)]
+    node.children = (await Promise.all([...this.getDependencies(node.pkgJson, parent)]
       .map(([dependency, required]) => this.resolveAndLoadDependencyOrNull(dependency, required, node))))
       .filter((x) => !!x) as TreeNode[];
     return node;
@@ -49,7 +49,7 @@ export class DependencyTreeLoader {
 
   private async resolveAndLoadDependencyOrNull(dependency: string, required: boolean, parent: TreeNode) {
     try {
-      return await this.resolveAndLoadDependency(dependency, parent.directory);
+      return await this.resolveAndLoadDependency(dependency, parent);
     } catch (err) {
       if (required) {
         logger.logErr(`Dependency "${dependency}" not installed for "${parent.name}@${parent.version}"`, chalk.grey(`(${parent.directory})`));
@@ -60,24 +60,24 @@ export class DependencyTreeLoader {
 
   async resolveAndLoadDependency(
     packageName: string,
-    fromDirectory: string,
+    parent: TreeNode,
   ): Promise<TreeNode> {
     return new Promise((resolve, reject) => {
       this.resolver.resolve(
         {},
-        fromDirectory,
+        parent.directory,
         packageName,
         {},
         (err: Error | null, res?: string | false) => {
           if (err) return reject(err);
-          if (!res) return reject(new Error(`failed to resolve ${packageName} from ${fromDirectory}`));
-          return resolve(this.loadDependency(dirname(res)));
+          if (!res) return reject(new Error(`failed to resolve ${packageName} from ${parent.directory}`));
+          return resolve(this.loadDependency(dirname(res), parent));
         },
       );
     });
   }
 
-  getDependencies(pkgJson: PackageJson): Map<string, boolean> {
+  getDependencies(pkgJson: PackageJson, parent?: TreeNode): Map<string, boolean> {
     const dependencies: Map<string, boolean> = new Map();
     const addDependencies = (
       deps: Record<string, string> = {},
@@ -91,7 +91,7 @@ export class DependencyTreeLoader {
       }
     };
     addDependencies(pkgJson.dependencies, pkgJson.dependenciesMeta, false);
-    if (!this.options.excludeDev) {
+    if (!parent && !this.options.excludeDev) {
       addDependencies(pkgJson.devDependencies, pkgJson.devDependenciesMeta, true);
     }
     if (!this.options.excludePeer) {

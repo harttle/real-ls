@@ -8,14 +8,14 @@ describe('CLI Command Test', () => {
     const result = spawnSync(exe, ['dep-a'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
     expect(result.status).toBe(0);
     expect(result.stdout).toBe(`.
-└── root-package@1.0.0 ./
-    └── dep-a@1.0.0 ./node_modules/dep-a
+└── root-package@1.0.0
+    └── dep-a@1.0.0
 `);
     expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n1 path(s) found for "dep-a"\n');
   });
 
   it('should print absolute path if specified', async () => {
-    const result = spawnSync(exe, ['dep-b@2.0.0', '--json', '--absolute-path'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
+    const result = spawnSync(exe, ['dep-b@2.0.0', '--format=json', '--path=absolute'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
 
     expect(JSON.parse(result.stdout)).toEqual({
       target: 'dep-b@2.0.0',
@@ -37,7 +37,7 @@ describe('CLI Command Test', () => {
   });
 
   it('should skip non result output if --silent set', () => {
-    const result = spawnSync(exe, ['dep-a', '--silent'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
+    const result = spawnSync(exe, ['dep-a', '--silent', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
     expect(result.status).toBe(0);
     expect(result.stdout).toBe(`.
 └── root-package@1.0.0 ./
@@ -46,8 +46,8 @@ describe('CLI Command Test', () => {
     expect(result.stderr).toBe('');
   });
 
-  it('should print JSON when --json set', () => {
-    const result = spawnSync(exe, ['dep-a', '--json', '--silent'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
+  it('should print JSON when --format=json set', () => {
+    const result = spawnSync(exe, ['dep-a', '--format=json', '--silent', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
       target: 'dep-a',
@@ -70,7 +70,7 @@ describe('CLI Command Test', () => {
   });
 
   it('should print JSON with empty paths when not found', () => {
-    const result = spawnSync(exe, ['dep-e', '--json'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
+    const result = spawnSync(exe, ['dep-e', '--format=json'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
     expect(result.status).toBe(1);
     expect(JSON.parse(result.stdout)).toEqual({
       target: 'dep-e',
@@ -79,8 +79,8 @@ describe('CLI Command Test', () => {
     expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-e"...\nDependency "dep-e" not found.\n');
   });
 
-  it('should print JSON only in stdout when --json set', () => {
-    const result = spawnSync(exe, ['dep-a', '--json'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
+  it('should print JSON only in stdout when --format=json set', () => {
+    const result = spawnSync(exe, ['dep-a', '--format=json', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
       target: 'dep-a',
@@ -102,23 +102,36 @@ describe('CLI Command Test', () => {
     expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n1 path(s) found for "dep-a"\n');
   });
 
-  it('should print no path if --no-path specified', async () => {
-    const result = spawnSync(exe, ['dep-a', '--no-path'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/missing-optional') });
+  it('should print no path if --path=none specified', async () => {
+    const result = spawnSync(exe, ['dep-a', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/missing-optional') });
 
     expect(result.stdout).toContain(`.
 └── root-package@1.0.0 ./
     └── dep-a@1.0.0 ./node_modules/dep-a`);
   });
 
+  describe('graphviz', () => {
+    it('should print dot format', () => {
+      const result = spawnSync(exe, ['dep-a', '--format=dot', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe(`digraph G {
+{ rank=same; "root-package (./)"; }
+{ rank=same; "dep-a (./node_modules/dep-a)"; }
+"root-package (./)" -> "dep-a (./node_modules/dep-a)"
+}`);
+      expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n');
+    });
+  });
+
   describe('cyclic handling', () => {
     it('should exit properly for cyclic deps', async () => {
-      const result = spawnSync(exe, ['dep-c', '--json'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/cyclic') });
+      const result = spawnSync(exe, ['dep-c', '--format=json'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/cyclic') });
       const jsonOutput = JSON.parse(result.stdout);
       expect(jsonOutput.paths).toHaveLength(0);
     });
 
     it('should print paths in JSON format for cyclic deps', async () => {
-      const result = spawnSync(exe, ['dep-a', '--json'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/cyclic') });
+      const result = spawnSync(exe, ['dep-a', '--format=json', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/cyclic') });
       const jsonOutput = JSON.parse(result.stdout);
 
       expect(jsonOutput.paths).toHaveLength(2);

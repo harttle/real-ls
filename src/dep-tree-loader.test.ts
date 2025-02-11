@@ -1,10 +1,11 @@
 import { join } from 'path';
 import { DependencyTreeLoader } from './dep-tree-loader';
 import { LogLevel, logger } from './logger';
+import { TreeNode } from './tree-node';
 
 describe('dep-tree-loader', () => {
-  const fixturesDir = join(__dirname, '../fixtures/dep-tree');
-  const cyclicDir = join(__dirname, '../fixtures/cyclic');
+  const parent = { directory: join(__dirname, '../fixtures/dep-tree'), depth: 1 } as TreeNode;
+  const cyclicParent = { directory: join(__dirname, '../fixtures/cyclic'), depth: 1 } as TreeNode;
   const loader = new DependencyTreeLoader({});
   let consoleWarnSpy: jest.SpyInstance;
 
@@ -17,28 +18,28 @@ describe('dep-tree-loader', () => {
   });
 
   it('loads direct dependencies', async () => {
-    const tree = await loader.resolveAndLoadDependency('dep-a', fixturesDir);
+    const tree = await loader.resolveAndLoadDependency('dep-a', parent);
     expect(tree.name).toBe('dep-a');
     expect(tree.version).toBe('1.0.0');
   });
 
   it('loads mjs entry', async () => {
-    const tree = await loader.resolveAndLoadDependency('dep-b', fixturesDir);
+    const tree = await loader.resolveAndLoadDependency('dep-b', parent);
     expect(tree.name).toBe('dep-b');
     expect(tree.version).toBe('2.0.0');
   });
 
   it('throws when package not found', async () => {
-    await expect(loader.resolveAndLoadDependency('non-existent-pkg', fixturesDir)).rejects.toThrow();
+    await expect(loader.resolveAndLoadDependency('non-existent-pkg', parent)).rejects.toThrow();
   });
 
   it('should prefer module entry', async () => {
-    const tree = await loader.resolveAndLoadDependency('dep-c', fixturesDir);
+    const tree = await loader.resolveAndLoadDependency('dep-c', parent);
     expect(tree.name).toBe('dep-c');
   });
 
   it('should load cyclic dependencies', async () => {
-    const tree = await loader.resolveAndLoadDependency('dep-a', cyclicDir);
+    const tree = await loader.resolveAndLoadDependency('dep-a', cyclicParent);
     expect(tree.name).toBe('dep-a');
     expect(tree.children.length).toEqual(1);
     expect(tree.children[0]).toHaveProperty('name', 'dep-b');
