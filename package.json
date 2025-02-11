@@ -63,12 +63,10 @@
   "dependencies": {
     "@viz-js/viz": "^3.11.0",
     "chalk": "^4.1.2",
-    "convert-svg-to-png": "^0.6.4",
     "enhanced-resolve": "^5.18.1",
     "flexible-tree-printer": "^1.0.3",
     "fs-extra": "^11.3.0",
     "npm-package-arg": "^12.0.2",
-    "resolve": "^1.22.10",
     "semver": "^7.5.4",
     "svg2img": "^1.0.0-beta.2",
     "yargs": "^17.3.0"
