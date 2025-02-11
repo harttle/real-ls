@@ -40,8 +40,8 @@ describe('CLI Command Test', () => {
     const result = spawnSync(exe, ['dep-a', '--silent', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
     expect(result.status).toBe(0);
     expect(result.stdout).toBe(`.
-└── root-package@1.0.0 ./
-    └── dep-a@1.0.0 ./node_modules/dep-a
+└── root-package@1.0.0 (.)
+    └── dep-a@1.0.0 (node_modules/dep-a)
 `);
     expect(result.stderr).toBe('');
   });
@@ -54,12 +54,12 @@ describe('CLI Command Test', () => {
       paths: [
         [
           {
-            directory: './',
+            directory: '.',
             name: 'root-package',
             version: '1.0.0',
           },
           {
-            directory: './node_modules/dep-a',
+            directory: 'node_modules/dep-a',
             name: 'dep-a',
             version: '1.0.0',
           },
@@ -87,12 +87,12 @@ describe('CLI Command Test', () => {
       paths: [
         [
           {
-            directory: './',
+            directory: '.',
             name: 'root-package',
             version: '1.0.0',
           },
           {
-            directory: './node_modules/dep-a',
+            directory: 'node_modules/dep-a',
             name: 'dep-a',
             version: '1.0.0',
           },
@@ -106,19 +106,29 @@ describe('CLI Command Test', () => {
     const result = spawnSync(exe, ['dep-a', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/missing-optional') });
 
     expect(result.stdout).toContain(`.
-└── root-package@1.0.0 ./
-    └── dep-a@1.0.0 ./node_modules/dep-a`);
+└── root-package@1.0.0 (.)
+    └── dep-a@1.0.0 (node_modules/dep-a)`);
   });
 
   describe('graphviz', () => {
     it('should print dot format', () => {
       const result = spawnSync(exe, ['dep-a', '--format=dot', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
       expect(result.status).toBe(0);
-      expect(result.stdout).toBe(`digraph G {
-{ rank=same; "root-package (./)"; }
-{ rank=same; "dep-a (./node_modules/dep-a)"; }
-"root-package (./)" -> "dep-a (./node_modules/dep-a)"
-}`);
+      expect(result.stdout).toContain('digraph G {');
+      expect(result.stdout).toContain('{ rank=same; "root-package@1.0.0 (.)"; }');
+      expect(result.stdout).toContain('{ rank=same; "dep-a@1.0.0 (node_modules/dep-a)"; }');
+      expect(result.stdout).toContain('"root-package@1.0.0 (.)" -> "dep-a@1.0.0 (node_modules/dep-a)"');
+      expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n');
+    });
+
+    it('should indicate duplicate packages', () => {
+      const result = spawnSync(exe, ['dep-a', '--format=dot', '--path=none'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/duplicate') });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('digraph G {');
+      expect(result.stdout).toContain('{ rank=same; "dep-a@1.0.0"; "dep-b@2.0.0"; }');
+      expect(result.stdout).toContain('"dep-b@2.0.0" -> "dep-a@1.0.0 (1)"');
+      expect(result.stdout).toContain('"root-package@1.0.0" -> "dep-a@1.0.0"');
+      expect(result.stdout).toContain('"root-package@1.0.0" -> "dep-b@2.0.0"');
       expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n');
     });
   });
@@ -140,12 +150,12 @@ describe('CLI Command Test', () => {
           {
             name: 'root-package',
             version: '1.0.0',
-            directory: './',
+            directory: '.',
           },
           {
             name: 'dep-a',
             version: '1.0.0',
-            directory: './node_modules/dep-a',
+            directory: 'node_modules/dep-a',
           },
         ],
       );
@@ -154,17 +164,17 @@ describe('CLI Command Test', () => {
           {
             name: 'root-package',
             version: '1.0.0',
-            directory: './',
+            directory: '.',
           },
           {
             name: 'dep-b',
             version: '2.0.0',
-            directory: './node_modules/dep-b',
+            directory: 'node_modules/dep-b',
           },
           {
             name: 'dep-a',
             version: '1.0.0',
-            directory: './node_modules/dep-a',
+            directory: 'node_modules/dep-a',
           },
         ],
       );

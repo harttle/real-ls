@@ -1,47 +1,14 @@
 import chalk from 'chalk';
 import svg2img from 'svg2img';
 import { instance } from '@viz-js/viz';
-import { relative } from 'path';
 import { writeFileSync } from 'fs';
 import { printTree } from 'flexible-tree-printer';
 import { TreeNode } from './tree-node';
 import { DependencyTreeLoader } from './dep-tree-loader';
 import { parseSpecifier } from './npm';
 import { logger } from './logger';
-
-const CWD = process.cwd();
-
-const enum FormatOption {
-  json = 'json',
-  ascii = 'ascii',
-  dot = 'dot',
-  svg = 'svg',
-  png = 'png',
-}
-
-const enum PathOption {
-  none = 'none',
-  absolute = 'absolute',
-  relative = 'relative',
-}
-
-interface PrintOptions {
-  format?: string;
-  path?: string;
-  // limit paths
-  maxPaths?: number;
-  // current working directory
-  cwd?: string;
-}
-
-interface FindDependencyPathsOptions extends PrintOptions {
-  excludeDev?: boolean;
-  excludePeer?: boolean;
-  excludeOptional?: boolean;
-  output?: string;
-}
-
-type TreeObject = { [key: string]: TreeObject };
+import { FindDependencyPathsOptions, FormatOption } from './options';
+import { DependencyGraph } from './dep-graph';
 
 export async function findDependencyPaths(specifier: string, options: FindDependencyPathsOptions) {
   const ref = parseSpecifier(specifier);
@@ -73,55 +40,21 @@ export async function findDependencyPaths(specifier: string, options: FindDepend
   return dfs(tree, new Set());
 }
 
-export async function createDependencyGraph(specifier: string, options: FindDependencyPathsOptions) {
-  const ref = parseSpecifier(specifier);
-  const cwd = options.cwd ?? process.cwd();
-
-  logger.infoErr(chalk.gray('Building dependency tree...'));
-  const tree = await new DependencyTreeLoader(options).loadDependency(cwd);
-
-  logger.infoErr(chalk.gray(`Matching "${specifier}"...`));
-  const G: Map<TreeNode, TreeNode[] | null> = new Map();
-
-  const dfs = (node: TreeNode, path: Set<TreeNode>): boolean => {
-    if (G.has(node)) return !!G.get(node);
-    if (node.match(ref)) {
-      G.set(node, []);
-      return true;
-    }
-    if (path.has(node)) return false;
-
-    path.add(node);
-    const children = node.children.filter((curr) => dfs(curr, path));
-    path.delete(node);
-
-    if (children.length) {
-      G.set(node, children);
-      return true;
-    }
-    G.set(node, null);
-    return false;
-  };
-  dfs(tree, new Set());
-
-  for (const [k, v] of G) if (v == null) G.delete(k);
-  return G as Map<TreeNode, TreeNode[]>;
-}
-
 export async function printDependencyPaths(
   specifier: string,
   options: FindDependencyPathsOptions,
 ): Promise<boolean> {
+  const graph = new DependencyGraph();
   if (options.format === FormatOption.dot) {
-    const G = await createDependencyGraph(specifier, options);
-    const str = createDOT(G, options);
+    const G = await graph.createDependencyGraph(specifier, options);
+    const str = createDOT(G);
     process.stdout.write(str);
     return G.size > 0;
   }
   if (options.format === FormatOption.svg) {
-    const G = await createDependencyGraph(specifier, options);
+    const G = await graph.createDependencyGraph(specifier, options);
     if (!G.size) return false;
-    const dot = createDOT(G, options);
+    const dot = createDOT(G);
     const viz = await instance();
     const svg = viz.renderString(dot, { format: 'svg' });
     const outputFile = options.output ?? 'dep.svg';
@@ -130,9 +63,9 @@ export async function printDependencyPaths(
     return true;
   }
   if (options.format === FormatOption.png) {
-    const G = await createDependencyGraph(specifier, options);
+    const G = await graph.createDependencyGraph(specifier, options);
     if (!G.size) return false;
-    const dot = createDOT(G, options);
+    const dot = createDOT(G);
     drawPNG(dot, options.output ?? 'dep.png');
     return true;
   }
@@ -140,32 +73,27 @@ export async function printDependencyPaths(
   const results = await findDependencyPaths(specifier, options);
   if (!results.length) logger.error(chalk.red(`Dependency "${specifier}" not found.`));
   else logger.infoErr(chalk.green(`${results.length} path(s) found for "${specifier}"`));
-  if (options.format === FormatOption.json) printJson(specifier, results, options);
-  else printTrees(results, options);
+  if (options.format === FormatOption.json) printJson(specifier, results);
+  else printTrees(results);
   return results.length > 0;
 }
 
-function printTrees(results: TreeNode[][], options: PrintOptions) {
+function printTrees(results: TreeNode[][]) {
   for (const result of results) {
-    printDependencyPath(result, options);
+    printDependencyPath(result);
   }
 }
 
-function printJson(target: string, results: TreeNode[][], options: PrintOptions) {
+function printJson(target: string, results: TreeNode[][]) {
   const paths = results.map((path) => path.map((node) => ({
     name: node.name,
     version: node.version,
-    directory: getDirectory(node.directory, options),
+    directory: node.getDirectory(),
   })));
   return process.stdout.write(`${JSON.stringify({ target, paths }, null, 4)}\n`);
 }
 
-function createDOT(G: Map<TreeNode, TreeNode[]>, options: PrintOptions) {
-  const serialize = (u: TreeNode) => {
-    const dir = getDirectory(u.directory, options);
-    const dirStr = dir ? ` (${dir})` : '';
-    return `"${u.name}${dirStr}"`;
-  };
+function createDOT(G: Map<TreeNode, TreeNode[]>) {
   const D = [...G.keys()].reduce((prev, curr) => Math.max(prev, curr.depth), 0) + 1;
   const nodeByRank: TreeNode[][] = Array(D).fill(0).map((_) => []);
   for (const node of G.keys()) {
@@ -173,40 +101,38 @@ function createDOT(G: Map<TreeNode, TreeNode[]>, options: PrintOptions) {
   }
   const ranks: string[] = [];
   for (const nodes of nodeByRank.values()) {
-    const list = nodes.map((x: TreeNode) => `${serialize(x)};`).join(' ');
+    const list = nodes.map((x: TreeNode) => `"${x}";`).join(' ');
     ranks.push(`{ rank=same; ${list} }`);
+  }
+
+  const colors: string[] = [];
+  for (const [u, children] of G) {
+    if (children.length) continue;
+    colors.push(`"${u}" [color=red fontcolor=red]`);
   }
 
   const edgeStrings: string[] = [];
   for (const [u, edges] of G) {
-    const su = serialize(u);
     for (const v of edges) {
-      const sv = serialize(v);
-      edgeStrings.push(`${su} -> ${sv}`);
+      edgeStrings.push(`"${u}" -> "${v}"`);
     }
   }
-  return `digraph G {\n${ranks.join('\n')}\n${edgeStrings.join('\n')}\n}`;
+  return `digraph G {
+    rankdir=LR;
+    ${ranks.join('\n')}
+    ${colors.join('\n')}
+    ${edgeStrings.join('\n')}
+  }`;
 }
 
-function getDirectory(dir: string, options: PrintOptions): string | undefined {
-  if (options.path === PathOption.absolute) return dir;
-  if (options.path === PathOption.relative) {
-    const cwd = options.cwd ?? CWD;
-    return `./${relative(cwd, dir)}`;
-  }
-  return undefined;
-}
+function printDependencyPath(result: TreeNode[]) {
+  type TreeObject = { [key: string]: TreeObject };
 
-function printDependencyPath(result: TreeNode[], options: PrintOptions) {
   const tree: TreeObject = {};
   let node = tree;
 
-  for (let i = 0; i < result.length; i++) {
-    const pkg = result[i];
-    const directory = getDirectory(pkg.directory, options) ?? '';
-    const directoryStr = directory ? ` ${chalk.gray(directory)}` : '';
-    const entry = `${pkg.name}@${pkg.version}${directoryStr}`;
-    node = node[entry] = {};
+  for (const u of result) {
+    node = node[u.toString()] = {};
   }
 
   printTree({ parentNode: tree });

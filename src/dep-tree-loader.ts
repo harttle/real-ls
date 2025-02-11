@@ -5,13 +5,15 @@ import { Resolver, CachedInputFileSystem, ResolverFactory } from 'enhanced-resol
 import { TreeNode } from './tree-node';
 import { PackageJson, findNearestPackageJson } from './npm';
 import { logger } from './logger';
+import { PrintOptions } from './options';
 
-interface LoadTreeOptions {
+interface LoadTreeOptions extends PrintOptions {
   excludeDev?: boolean;
   excludePeer?: boolean;
   excludeOptional?: boolean;
   mainField?: 'browser' | 'main' | 'module';
 }
+
 export class DependencyTreeLoader {
   pending = new Map<string, Promise<TreeNode>>();
 
@@ -37,7 +39,7 @@ export class DependencyTreeLoader {
       // TreeNode only, maybe without children populated
       return this.pending.get(pkgJsonPath)!;
     }
-    const pending = TreeNode.createFromPackageJsonPath(pkgJsonPath, parent);
+    const pending = TreeNode.createFromPackageJsonPath(pkgJsonPath, this.options, parent);
     this.pending.set(pkgJsonPath, pending);
 
     const node = await pending;
