@@ -35,20 +35,20 @@ const argv = yargs
       describe: 'Limit paths to be printed, as there can be exponential number of paths',
       default: 1024,
     },
-    'exclude-dev': {
+    'include-dev': {
       type: 'boolean',
-      describe: 'Exclude dev dependencies for root, deep dev dependencies are always excluded',
-      default: false,
-    },
-    'exclude-peer': {
-      type: 'boolean',
-      describe: 'Exclude peer dependencies',
+      describe: 'Include dev dependencies for root, deep dev dependencies are always excluded',
       default: true,
     },
-    'exclude-optional': {
+    'include-peer': {
       type: 'boolean',
-      describe: 'Exclude optional dependencies',
+      describe: 'Include peer dependencies',
       default: false,
+    },
+    'include-optional': {
+      type: 'boolean',
+      describe: 'Include optional dependencies',
+      default: true,
     },
     verbose: {
       type: 'boolean',
@@ -63,7 +63,7 @@ const argv = yargs
   })
   .example('real-ls lodash', 'find dependencies with package name "lodash"')
   .example('real-ls lodash@^4.3.0', 'find dependencies matching semver "lodash@^4.3.0"')
-  .example('real-ls --exclude-dev lodash@^4.3.0', 'find "lodash@^4.3.0", while excluding dev dependencies')
+  .example('real-ls --include-dev=false lodash@^4.3.0', 'find "lodash@^4.3.0", excluding dev dependencies')
   .demandCommand(1)
   .parseSync();
 

@@ -56,6 +56,7 @@ describe('dep-tree-loader', () => {
 
   it('should warn missing peer dependency', async () => {
     logger.level = LogLevel.Log;
+    const loader = new DependencyTreeLoader({ includePeer: true });
     await loader.loadDependency(join(__dirname, '../fixtures/missing-peer/'));
     const fullWarn = consoleWarnSpy.mock.calls.map((call) => call.join(' ')).join('\n');
     expect(fullWarn).toContain('Dependency "dep-a" not installed for "root-package@1.0.0"');
@@ -63,6 +64,7 @@ describe('dep-tree-loader', () => {
 
   it('should skip missing optional peer dependency', async () => {
     logger.level = LogLevel.Log;
+    const loader = new DependencyTreeLoader({ includePeer: true });
     await loader.loadDependency(join(__dirname, '../fixtures/missing-optional-peer/'));
     const fullWarn = consoleWarnSpy.mock.calls.map((call) => call.join(' ')).join('\n');
     expect(fullWarn).not.toContain('not installed');

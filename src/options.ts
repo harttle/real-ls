@@ -22,8 +22,8 @@ export interface PrintOptions {
 }
 
 export interface FindDependencyPathsOptions extends PrintOptions {
-  excludeDev?: boolean;
-  excludePeer?: boolean;
-  excludeOptional?: boolean;
+  includeDev?: boolean;
+  includePeer?: boolean;
+  includeOptional?: boolean;
   output?: string;
 }

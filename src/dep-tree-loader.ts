@@ -8,9 +8,9 @@ import { logger } from './logger';
 import { PrintOptions } from './options';
 
 interface LoadTreeOptions extends PrintOptions {
-  excludeDev?: boolean;
-  excludePeer?: boolean;
-  excludeOptional?: boolean;
+  includeDev?: boolean;
+  includePeer?: boolean;
+  includeOptional?: boolean;
   mainField?: 'browser' | 'main' | 'module';
 }
 
@@ -93,13 +93,13 @@ export class DependencyTreeLoader {
       }
     };
     addDependencies(pkgJson.dependencies, pkgJson.dependenciesMeta, false);
-    if (!parent && !this.options.excludeDev) {
+    if (!parent && this.options.includeDev) {
       addDependencies(pkgJson.devDependencies, pkgJson.devDependenciesMeta, true);
     }
-    if (!this.options.excludePeer) {
+    if (this.options.includePeer) {
       addDependencies(pkgJson.peerDependencies, pkgJson.peerDependenciesMeta, false);
     }
-    if (!this.options.excludeOptional) {
+    if (this.options.includeOptional) {
       addDependencies(pkgJson.optionalDependencies, pkgJson.optionalDependenciesMeta, true);
     }
     return dependencies;
