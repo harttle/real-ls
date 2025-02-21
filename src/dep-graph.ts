@@ -1,67 +1,97 @@
 import chalk from 'chalk';
 import { DependencyTreeLoader } from './dep-tree-loader';
-import { parseSpecifier } from './npm';
-import { FindDependencyPathsOptions } from './options';
+import { DependencyReference, parseSpecifier } from './npm';
+import { RealLSOptions } from './options';
 import { TreeNode } from './tree-node';
 import { logger } from './logger';
 
-// only nodes from which target is reachable
-export type Graph = Map<TreeNode, TreeNode[]>;
-// all nodes traversed, not necessary to be all deps
-export type RawGraph = Map<TreeNode, TreeNode[] | null>
-
 export class DependencyGraph {
-  G?: Graph;
+  roots: TreeNode[];
+  nodes: Set<TreeNode>;
+  specifier: string;
 
-  async loadTree(options: FindDependencyPathsOptions) {
-    const cwd = options.cwd ?? process.cwd();
-    return new DependencyTreeLoader(options).loadDependency(cwd);
+  constructor(specifier: string, roots: TreeNode[]) {
+    this.specifier = specifier;
+    this.roots = roots;
+    this.nodes = this.getAllNodes();
+    this.markOrderForDuplicates();
   }
 
-  async createDependencyGraph(specifier: string, options: FindDependencyPathsOptions) {
+  get size() {
+    return this.nodes.size;
+  }
+
+  private getAllNodes(): Set<TreeNode> {
+    const nodes: Set<TreeNode> = new Set();
+    for (const root of this.roots) {
+      for (const node of DependencyGraph.getNodes(root)) nodes.add(node);
+    }
+    return nodes;
+  }
+
+  getPathsWithLimit(limit = 1024) {
+    const paths = [];
+    for (const path of this.getAllPaths()) {
+      paths.push(path);
+      if (paths.length >= limit) return paths;
+    }
+    return paths;
+  }
+
+  * getAllPaths(): IterableIterator<TreeNode[]> {
+    for (const root of this.roots) yield* this.getPaths(root);
+  }
+
+  * getPaths(node: TreeNode, stack: TreeNode[] = []): IterableIterator<TreeNode[]> {
+    stack.push(node);
+    if (node.isTarget) yield [...stack];
+    else for (const child of node.children) yield* this.getPaths(child, stack);
+    stack.pop();
+  }
+
+  static markTargets(root: TreeNode, ref: DependencyReference) {
+    if (root.isTarget !== undefined) return;
+    root.isTarget = root.match(ref);
+
+    for (const child of root.children) {
+      DependencyGraph.markTargets(child, ref);
+    }
+  }
+
+  static getNodes(root: TreeNode, nodes = new Set<TreeNode>()): Set<TreeNode> {
+    if (nodes.has(root)) return nodes;
+    nodes.add(root);
+    for (const child of root.children) DependencyGraph.getNodes(child, nodes);
+    return nodes;
+  }
+
+  /*
+   * Create a dependency graph from dependency tree
+   */
+  static async createDependencyGraph(specifier: string, options: RealLSOptions) {
     const ref = parseSpecifier(specifier);
-    const cwd = options.cwd ?? process.cwd();
 
     logger.infoErr(chalk.gray('Building dependency tree...'));
-    const tree = await new DependencyTreeLoader(options).loadDependency(cwd);
+    const loader = new DependencyTreeLoader(options);
+    const root = options.root?.length ? options.root : [process.cwd()];
+    const trees = await Promise.all(root.map((dir) => loader.loadDependency(dir)));
 
     logger.infoErr(chalk.gray(`Matching "${specifier}"...`));
-    const G: RawGraph = new Map();
+    for (const tree of trees) {
+      DependencyGraph.markTargets(tree, ref);
+      DependencyGraph.cutNonReachable(tree);
+    }
 
-    const dfs = (node: TreeNode, path: Set<TreeNode>): boolean => {
-      if (G.has(node)) return !!G.get(node);
-      if (node.match(ref)) {
-        G.set(node, []);
-        return true;
-      }
-      if (path.has(node)) return false;
-
-      path.add(node);
-      const children = node.children.filter((curr) => dfs(curr, path));
-      path.delete(node);
-
-      if (children.length) {
-        G.set(node, children);
-        return true;
-      }
-      G.set(node, null);
-      return false;
-    };
-    dfs(tree, new Set());
-
-    this.G = this.normalize(G);
-    return this.G;
+    return new DependencyGraph(specifier, trees);
   }
 
-  private normalize(G: RawGraph): Graph {
-    this.removeNodesNotReachableTarget(G);
-    this.markOrderForDuplicates(G);
-    return G as Graph;
-  }
-
-  private markOrderForDuplicates(G: RawGraph) {
+  /**
+   * We want duplicate packages (there can be duplicates in both npm and pnpm)
+   * to be marked with an order number in output.
+   */
+  private markOrderForDuplicates() {
     const nodeByName = new Map();
-    for (const node of G.keys()) {
+    for (const node of this.nodes) {
       const name = `${node.name}@${node.version}`;
       if (!nodeByName.has(name)) nodeByName.set(name, []);
       const nodes = nodeByName.get(name)!;
@@ -70,7 +100,26 @@ export class DependencyGraph {
     }
   }
 
-  private removeNodesNotReachableTarget(G: RawGraph) {
-    for (const [k, v] of G) if (v == null) G.delete(k);
+  /**
+   * Filtering out packages not reachable to `specifier`, thus no cycles now exists.
+   * Note: the root packages are not cut.
+   */
+  static cutNonReachable(tree: TreeNode, stack = new Set<TreeNode>()): boolean {
+    if (stack.has(tree)) tree.isReachable = false;
+    if (tree.isReachable !== undefined) return tree.isReachable;
+
+    if (tree.isTarget) {
+      tree.children = [];
+      tree.isReachable = true;
+      return true;
+    }
+
+    stack.add(tree);
+    const children = tree.children.filter((child) => DependencyGraph.cutNonReachable(child, stack));
+    stack.delete(tree);
+
+    tree.isReachable = children.length > 0;
+    tree.children = children;
+    return tree.isReachable;
   }
 }

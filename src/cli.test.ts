@@ -110,6 +110,43 @@ describe('CLI Command Test', () => {
     └── dep-a@1.0.0 (node_modules/dep-a)`);
   });
 
+  describe('multiple entries', () => {
+    it('should print dependencies from multiple entries specified by --root', () => {
+      const args = ['dep-a', '--root=fixtures/dep-tree', '--root=fixtures/cyclic'];
+      const result = spawnSync(exe, args, { encoding: 'utf-8' });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe(`.
+└── root-package@1.0.0
+    └── dep-a@1.0.0
+.
+└── cyclic@1.0.0
+    └── dep-a@1.0.0 (1)
+.
+└── cyclic@1.0.0
+    └── dep-b@2.0.0
+        └── dep-a@1.0.0 (1)
+`);
+      expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n3 path(s) found for "dep-a"\n');
+    });
+    it('should print dependencies from multiple entries from STDIN', () => {
+      const input = ['fixtures/dep-tree', 'fixtures/cyclic'].join('\n');
+      const result = spawnSync(exe, ['dep-a'], { encoding: 'utf-8', input });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe(`.
+└── root-package@1.0.0
+    └── dep-a@1.0.0
+.
+└── cyclic@1.0.0
+    └── dep-a@1.0.0 (1)
+.
+└── cyclic@1.0.0
+    └── dep-b@2.0.0
+        └── dep-a@1.0.0 (1)
+`);
+      expect(result.stderr).toBe('Building dependency tree...\nMatching "dep-a"...\n3 path(s) found for "dep-a"\n');
+    });
+  });
+
   describe('graphviz', () => {
     it('should print dot format', () => {
       const result = spawnSync(exe, ['dep-a', '--format=dot', '--path=relative'], { encoding: 'utf-8', cwd: join(__dirname, '../fixtures/dep-tree') });
@@ -148,7 +185,7 @@ describe('CLI Command Test', () => {
       expect(jsonOutput.paths[0]).toEqual(
         [
           {
-            name: 'root-package',
+            name: 'cyclic',
             version: '1.0.0',
             directory: '.',
           },
@@ -162,7 +199,7 @@ describe('CLI Command Test', () => {
       expect(jsonOutput.paths[1]).toEqual(
         [
           {
-            name: 'root-package',
+            name: 'cyclic',
             version: '1.0.0',
             directory: '.',
           },

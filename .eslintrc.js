@@ -39,6 +39,8 @@ const eslintrc = {
     'no-continue': 'off',
     'no-shadow': 'off',
     'no-param-reassign': 'off',
+    'consistent-return': 'off',
+    'lines-between-class-members': 'off',
     'max-len': 'off',
     'import/extensions': 'off',
   },

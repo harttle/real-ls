@@ -8,19 +8,14 @@ const CWD = process.cwd();
 
 export class TreeNode {
   name: string;
-
+  isReachable: boolean | undefined;
+  isTarget: boolean | undefined;
   depth: number;
-
   version: string;
-
   directory: string;
-
   order?: string;
-
   children: TreeNode[] = [];
-
   pkgJson: PackageJson;
-
   options: PrintOptions;
 
   constructor(pkgJson: PackageJson, directory: string, depth: number, options: PrintOptions) {
@@ -47,8 +42,7 @@ export class TreeNode {
   getDirectory() {
     if (this.options.path === PathOption.absolute) return this.directory;
     if (this.options.path === PathOption.relative) {
-      const cwd = this.options.cwd ?? CWD;
-      return join('.', relative(cwd, this.directory));
+      return join('.', relative(CWD, this.directory));
     }
     return undefined;
   }

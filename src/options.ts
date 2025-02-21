@@ -15,15 +15,13 @@ export const enum PathOption {
 export interface PrintOptions {
   format?: string;
   path?: string;
-  // limit paths
   maxPaths?: number;
-  // current working directory
-  cwd?: string;
 }
 
-export interface FindDependencyPathsOptions extends PrintOptions {
+export interface RealLSOptions extends PrintOptions {
   includeDev?: boolean;
   includePeer?: boolean;
   includeOptional?: boolean;
   output?: string;
+  root?: string[];
 }

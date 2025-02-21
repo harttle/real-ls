@@ -16,9 +16,7 @@ interface LoadTreeOptions extends PrintOptions {
 
 export class DependencyTreeLoader {
   pending = new Map<string, Promise<TreeNode>>();
-
   options: LoadTreeOptions;
-
   resolver: Resolver;
 
   constructor(options: LoadTreeOptions) {
@@ -33,6 +31,9 @@ export class DependencyTreeLoader {
     });
   }
 
+  /**
+   * Load the current package in `dir`, with an optional `parent`
+   */
   async loadDependency(dir: string, parent?: TreeNode): Promise<TreeNode> {
     const pkgJsonPath = await findNearestPackageJson(dir);
     if (this.pending.has(pkgJsonPath)) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import yargs from 'yargs';
 import chalk from 'chalk';
-import { printDependencyPaths } from './dep-path';
+import { printDependencyPaths } from './index';
 import { LogLevel, logger } from './logger';
 
 // disable colors in non-interactive shell
@@ -23,6 +23,11 @@ const argv = yargs
     output: {
       type: 'string',
       describe: 'Output file name',
+    },
+    root: {
+      string: true,
+      type: 'array',
+      describe: 'Directories of entry packages, default to CWD',
     },
     path: {
       type: 'string',
@@ -64,6 +69,7 @@ const argv = yargs
   .example('real-ls lodash', 'find dependencies with package name "lodash"')
   .example('real-ls lodash@^4.3.0', 'find dependencies matching semver "lodash@^4.3.0"')
   .example('real-ls --include-dev=false lodash@^4.3.0', 'find "lodash@^4.3.0", excluding dev dependencies')
+  .example('echo "/home/x/hello-world/core\n/home/x/hello-world/plugins" | real-ls lodash', 'pass in entry directories from STDIN')
   .demandCommand(1)
   .parseSync();
 
@@ -72,6 +78,6 @@ const packageName = argv._[0] as string;
 if (argv.verbose) logger.level = LogLevel.Log;
 else if (argv.silent) logger.level = LogLevel.Error;
 
-printDependencyPaths(packageName, argv).then((success) => {
+printDependencyPaths(packageName, argv).then((success: boolean) => {
   if (!success) process.exit(1);
 });
