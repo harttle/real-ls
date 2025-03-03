@@ -1,6 +1,6 @@
 {
   "name": "real-ls",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "List actually resolved dependencies in node_modules",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
