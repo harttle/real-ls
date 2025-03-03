@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import { resolve } from 'path';
 import yargs from 'yargs';
 import chalk from 'chalk';
 import { printDependencyPaths } from './index';
 import { LogLevel, logger } from './logger';
+import { readStdin } from './io';
 
 // disable colors in non-interactive shell
 if (!process.stdout.isTTY) chalk.level = 0;
@@ -78,6 +80,18 @@ const packageName = argv._[0] as string;
 if (argv.verbose) logger.level = LogLevel.Log;
 else if (argv.silent) logger.level = LogLevel.Error;
 
-printDependencyPaths(packageName, argv).then((success: boolean) => {
+// Read from stdin if available
+async function getRootDirs(argv: any): Promise<string[] | undefined> {
+  if (!process.stdin.isTTY && !argv.root?.length) {
+    const input = await readStdin();
+    return input.trim().split('\n').filter(Boolean).map((x) => resolve(x));
+  }
+  return argv.root;
+}
+
+getRootDirs(argv).then((rootDirs: string[] | undefined) => {
+  const options = { ...argv, root: rootDirs };
+  return printDependencyPaths(packageName, options);
+}).then((success: boolean) => {
   if (!success) process.exit(1);
 });

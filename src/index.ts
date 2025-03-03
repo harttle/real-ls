@@ -5,15 +5,11 @@ import { handlePNG } from './visualizers/png';
 import { handleSVG } from './visualizers/svg';
 import { handleJSON } from './visualizers/json';
 import { handleASCII } from './visualizers/ascii';
-import { readStdin } from './io';
 
 export async function printDependencyPaths(
   specifier: string,
   options: RealLSOptions,
 ): Promise<boolean> {
-  const input = await readStdin();
-  options.root = options.root || [];
-  options.root.push(...input.split('\n').map((x) => x.trim()).filter((x) => !!x));
   const G = await DependencyGraph.createDependencyGraph(specifier, options);
 
   if (options.format === FormatOption.dot) {
